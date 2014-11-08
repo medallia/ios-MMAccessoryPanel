@@ -15,7 +15,8 @@ If you are using CocoaPods, add: pod 'MMAccessoryPanel' to the Podfile.
 ##Sample code:
 
 To add the bar to any scroll view:
-1. In viewDidLoad, add:
+
+In viewDidLoad, add:
 
 	UIToolbar *bar1 = [[UIToolbar alloc] initWithFrame:CGRectMake(0, 0, self.view.frame.size.width, 40.0)];
 	bar1.barTintColor = [UIColor colorWithRed:0.1 green:0.8 blue:1.0 alpha:1.0];
@@ -26,7 +27,7 @@ To add the bar to any scroll view:
 	self.accessoryPanel = [[MMAccessoryPanel alloc] initWithBars:@[bar1, bar2]];
 	self.accessoryPanel.viewController = self;
 
-2. In viewDidAppear, add:
+In viewDidAppear, add:
 
 	[self.accessoryPanel snapToScrollView:self.tableView];
 
