@@ -1,7 +1,7 @@
 Pod::Spec.new do |s|
 
   s.name         = "MMAccessoryPanel"
-  s.version      = "1.0.0"
+  s.version      = "1.0.1"
   s.summary      = "Creates and manages collapsible bars on top of any UIScrollView, just below the navigation bar."
 
   s.description  = <<-DESC
@@ -13,12 +13,11 @@ Pod::Spec.new do |s|
                    The behavior is some what similar to the top bar in Facebook app.
                    DESC
 
-  s.homepage     = "http://www.medallia.com"
+  s.homepage     = "http://engineering.medallia.com/"
   s.license      = { :type => "MIT", :file => "LICENSE.md" }
-  s.author             = "Minh Tran"
-  s.social_media_url   = "http://twitter.com/zealix"
+  s.author             = "Medallia"
   s.platform     = :ios, "6.0"
-  s.source       = { :git => "https://github.com/medallia/ios-MMAccessoryPanel.git", :tag => "v1.0.0" }
+  s.source       = { :git => "https://github.com/medallia/ios-MMAccessoryPanel.git", :tag => "v1.0.1" }
   s.source_files  = "MMAccessoryPanel", "MMAccessoryPanel/**/*.{h,m}"
   s.public_header_files = "MMAccessoryPanel/**/*.h"
   s.requires_arc = true

@@ -5,7 +5,7 @@ MMAccessoryPanel is a iOS Cocoa Touch class that creates and manages collapsible
 
 MMAccessoryPanel helps maximize usable screen estate for scroll view. The behavior is some what similar to the top bar in Facebook app.
 
-![Crappy gif ahoy!](images/demo.gif)
+![Animated gif!](images/demo.gif)
 
 ##Installation
 Copy the `MMAccessoryPanel` folder that has the `.h` and `.m` into you project.
@@ -31,9 +31,9 @@ In viewDidAppear, add:
 
 	[self.accessoryPanel snapToScrollView:self.tableView];
 
-Please See the attached sample project for details.
+See the attached sample project for more details.
 
 ##Credits
 MMAccessoryPanel was originally developed by Medallia mobile team for Medallia mobile app. 
-http://www.medallia.com/
+
 https://itunes.apple.com/us/app/medallia-mobile-2/id675309749?mt=8

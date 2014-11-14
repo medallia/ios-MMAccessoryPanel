@@ -5,9 +5,11 @@
 
 @interface MMAccessoryPanel()
 {
-	// last processed scrollview contentOffset.y
-	CGFloat _adjustedOffsetY;
-	
+	// last known contentOffset.y of the targetScrollView
+	CGFloat _currentContentOffsetY;
+	// last known contentInset.top of the targetScrollView
+	CGFloat _currentContentInsetTop;
+	// set to indicate the layout constraints need to be created for this view
 	BOOL _needsSetupConstraints;
 }
 
@@ -80,9 +82,12 @@
 			// update scrollview insets
 			[_targetScrollView addObserver:self forKeyPath:kMMAccessoryBarContentOffsetPropertyName options:NSKeyValueObservingOptionNew | NSKeyValueObservingOptionInitial context:nil];
 			if (_targetScrollView.delegate == nil) _targetScrollView.delegate = self;
-			[self.targetScrollView.superview insertSubview:self aboveSubview:self.targetScrollView];
+			_currentContentOffsetY = _targetScrollView.contentOffset.y;
+			_currentContentInsetTop = _targetScrollView.contentInset.top;
 			_needsSetupConstraints = YES;
-			[self.targetScrollView.superview setNeedsUpdateConstraints];
+
+			[_targetScrollView.superview insertSubview:self aboveSubview:_targetScrollView];
+			[_targetScrollView.superview setNeedsUpdateConstraints];
 		}
 	}
 }
@@ -115,12 +120,12 @@
 	}
 }
 
-- (void)willMoveToSuperview:(UIView *)newSuperview
+- (void)didMoveToSuperview
 {
-	[super willMoveToSuperview:newSuperview];
-	if (newSuperview == nil) {
+	if (self.superview == nil) {
 		self.targetScrollView = nil;
 	}
+	[super didMoveToSuperview];
 }
 
 #pragma mark - Layout Constraints
@@ -178,7 +183,7 @@
 		[self.superview addConstraints:@[leftConstraint, rightConstraint]];
 
 		UIViewController *viewController = self.viewController;
-		if (viewController) {
+		if (viewController && [viewController respondsToSelector:@selector(topLayoutGuide)]) {
 			NSLayoutConstraint * topLayoutGuideConstraint = [NSLayoutConstraint constraintWithItem:self
 																					  attribute:NSLayoutAttributeTop
 																					  relatedBy:NSLayoutRelationEqual
@@ -202,7 +207,7 @@
 			NSLayoutConstraint *topConstraint = [NSLayoutConstraint constraintWithItem:self
 															 attribute:NSLayoutAttributeTop
 															 relatedBy:NSLayoutRelationEqual
-																toItem:_targetScrollView
+																toItem:self.targetScrollView
 															 attribute:NSLayoutAttributeTop
 															multiplier:1.0 constant:0];
 			[self.superview addConstraint:topConstraint];
@@ -214,9 +219,9 @@
 
 - (void)layoutSubviews
 {
-	[super layoutSubviews];
 	[self setupConstraints];
 	[self updateMaxHeight];
+	[super layoutSubviews];
 
 	// Stacks bars vertically
 	CGFloat y = 0;
@@ -237,6 +242,7 @@
 	if (self.maxHeightConstraint.constant != maxHeight) {
 		CGFloat delta = maxHeight - self.maxHeightConstraint.constant;
 		self.maxHeightConstraint.constant = maxHeight;
+		self.heightConstraint.constant = maxHeight;
 		
 		if (self.targetScrollView) {
 			// schedule it to run async so the resizing does not affect current
@@ -259,12 +265,12 @@
 						contentOffset.y -= delta;
 						if (contentOffset.y < -insets.top) contentOffset.y = -insets.top;
 						self.targetScrollView.contentOffset = contentOffset;
-						_adjustedOffsetY = contentOffset.y + self.targetScrollView.contentInset.top;
+						_currentContentOffsetY = contentOffset.y;
+						_currentContentInsetTop = self.targetScrollView.contentInset.top;
 					}
 				}];
 			});
 		}
-		self.heightConstraint.constant = maxHeight;
 	}
 }
 
@@ -272,27 +278,26 @@
 
 - (void)observeValueForKeyPath:(NSString *)keyPath ofObject:(id)object change:(NSDictionary *)change context:(void *)context
 {
-	assert(object == _targetScrollView);
-	
+	NSAssert(object == self.targetScrollView, @"Wrong object is observed");
+
 	if ([kMMAccessoryBarContentOffsetPropertyName isEqualToString:keyPath]) {
 		dispatch_async(dispatch_get_main_queue(), ^{
 			CGFloat height;
-			CGFloat adjustedOffsetY = self.targetScrollView.contentOffset.y + self.targetScrollView.contentInset.top;
-			if (adjustedOffsetY != _adjustedOffsetY) {
-				if (adjustedOffsetY >= 0)
+			CGFloat contentOffsetY = self.targetScrollView.contentOffset.y;
+			CGFloat contentInsetTop = self.targetScrollView.contentInset.top;
+			if (contentOffsetY + contentInsetTop != _currentContentOffsetY + _currentContentInsetTop) {
+				if (contentOffsetY + contentInsetTop >= 0) // not bouncing top
 				{
-					if (adjustedOffsetY > self.targetScrollView.contentSize.height - self.targetScrollView.frame.size.height + self.targetScrollView.contentInset.top) // bouncing bottom
-						adjustedOffsetY = self.targetScrollView.contentSize.height - self.targetScrollView.frame.size.height + self.targetScrollView.contentInset.top;
-					
-					CGFloat deltaY = adjustedOffsetY - _adjustedOffsetY;
+					CGFloat deltaY = contentOffsetY + contentInsetTop - _currentContentOffsetY - _currentContentInsetTop;
 					// expand or collapse the view as the superview scrolls at half the speed
 					height = MAX(0.0f, MIN(self.maxHeight, self.frame.size.height - deltaY));
 				} else {
 					height = self.maxHeight;
 				}
-				_adjustedOffsetY = adjustedOffsetY;
 				self.heightConstraint.constant = roundf(height);
 			}
+			_currentContentOffsetY = contentOffsetY;
+			_currentContentInsetTop = contentInsetTop;
 		});
 	}
 }
@@ -301,11 +306,10 @@
 
 - (void)scrollViewWillEndDragging:(UIScrollView *)scrollView withVelocity:(CGPoint)velocity targetContentOffset:(inout CGPoint *)targetContentOffset
 {
-	if (scrollView == _targetScrollView) {
-		CGPoint currentOffset = _targetScrollView.contentOffset;
+	if (self.targetScrollView == scrollView && targetContentOffset) {
 		CGPoint targetOffset = *targetContentOffset;
 		
-		CGFloat delta = targetOffset.y - currentOffset.y;
+		CGFloat delta = targetOffset.y - _currentContentOffsetY;
 		CGFloat height = self.heightConstraint.constant;
 		CGFloat maxHeight = self.maxHeightConstraint.constant;
 		
